@@ -1,398 +1,558 @@
---Question 1 — Count Patients per Ward
---Display the number of patients assigned to each ward.
-SELECT WardId , COUNT(ID)
-FROM Patients 
-GROUP BY WardId
+--ASP.Net Course 
+--Question 1 — Display All Patients
+--Create a stored procedure that returns all patients.
 
---Question 2 — Calculate the Average Consultant Salary
---Display the average salary of all consultants.
-SELECT AVG(Salary)
+CREATE OR ALTER PROC GETALLPATIENTS
+AS
+BEGIN
+
+SELECT *
+FROM Patients
+END;
+GO
+
+
+EXEC GETALLPATIENTS 
+
+
+--Question 2 — Display All Consultants
+--Create a stored procedure that returns all consultants with their salaries.
+
+--Create a stored procedure that returns all patients.
+GO
+CREATE OR ALTER PROC GETALLConsultants
+AS
+BEGIN
+
+SELECT NAME , SALARY
 FROM Consultants
+END;
 
---Question 3 — Display Salary Statistics for Consultants
---Display the minimum, maximum, average, and total consultant salaries.
+EXEC GETALLConsultants
 
-SELECT AVG(Salary) ,MIN(SALARY), MAX(SALARY)
-FROM Consultants
+--Question 3 — Display Patients with Their Wards
+--Create a stored procedure that displays every patient together with the ward they belong to.
 
+GO
+CREATE OR ALTER PROC GETALLPATIENTSWITHWARDID
+AS
+BEGIN
 
---Question 4 — Count Patients by Ward
---Display the ward ID and number of patients in each ward, sorted from highest to lowest.
+SELECT P.Name , W.Name 'WARD NAME'
+FROM Patients P INNER JOIN WARDS W
+ON P.WardId = W.ID
+END;
 
-SELECT WardId , COUNT(ID)
-FROM Patients 
-GROUP BY WardId
-ORDER BY WardId DESC
+--Question 4 — Get Patient by ID
+--Create a stored procedure that receives a patient ID and returns that patient.
 
---Question 5 — Medication Quantity per Patient
---Display the total medication quantity administered to each patient.
-
-SELECT PatientId , SUM(DRUGCODE) 'Medication Quantity'
-FROM DrugAdministrations 
-GROUP BY PatientId
-
---Question 6 — Medication Administrations per Patient
---Display each patient ID together with the number of medication administrations they received.
-
-SELECT PatientId , COUNT(DRUGCODE) 
-FROM DrugAdministrations 
-GROUP BY PatientId
-
-
---Question 7 — Patients per Ward with Ward Names
---Display every ward together with the number of patients assigned to it, including wards with no patients.
-
-SELECT W.Name 'WARD NAME' , COUNT(P.Id) 'patients assigned to'
-FROM Patients P RIGHT JOIN Wards W
-ON P.WardId = W.Id
-GROUP BY W.Name
-
-
---Question 8 — Average Nurse Salary per Ward
---Display each ward together with the average salary of nurses serving in that ward.
- 
- SELECT ServesInWardId ,AVG(Salary)
- FROM Nurses 
- GROUP BY ServesInWardId
-
--- Question 9 — Wards with More Than 3 Patients
---Display wards that have more than 3 patients.
-
-SELECT WardId , COUNT(ID)
-FROM Patients 
-GROUP BY WardId
-HAVING COUNT(ID) > 3
-
---Question 10 — Patients with More Than 5 Medication Administrations
---Display patients who received medication more than 5 times.
-
-SELECT PatientId , COUNT(DRUGCODE) 
-FROM DrugAdministrations 
-GROUP BY PatientId
-HAVING COUNT(DRUGCODE) > 5
-
---Question 11 — Consultants Above Average Salary
---Display consultants whose salary is greater than the average consultant salary.
-
-SELECT  NAME 
-FROM Consultants
-WHERE Salary > 
-(
-SELECT AVG(Salary)
-FROM Consultants
-)
---Question 12 — Nurses Above Average Salary
---Display nurses whose salary is greater than the average nurse salary.
-
-
-SELECT  NAME 
-FROM NURSES
-WHERE Salary > 
-(
-SELECT AVG(Salary)
-FROM NURSES
-)
---Question 13 — Patients in the Largest Ward
---Display patients who belong to the ward containing the largest number of patients.
+GO
+CREATE OR ALTER PROC GETPATIENTBYID
+@ID INT
+AS
+BEGIN
 
 SELECT NAME 
 FROM Patients 
-WHERE WardId =
-(
-SELECT MAX(WardId)
-FROM Patients
-)
+WHERE ID = @ID
+END;
 
---Question 14 — Consultants with the Maximum Salary
---Display the consultant or consultants who have the highest salary.
+EXEC GETPATIENTBYID 299
 
-SELECT NAME
-FROM Consultants 
-WHERE Salary =
-(
-SELECT MAX(Salary)
+--Question 5 — Get Consultants by Minimum Salary
+--Create a stored procedure that receives a minimum salary and returns consultants whose salary is greater than or equal to it.
+
+GO
+CREATE OR ALTER PROC GETHIGHSALARYCON
+@MINSALARY DECIMAL (18,2)
+AS
+BEGIN
+
+SELECT NAME , SALARY
 FROM Consultants
-)
+WHERE Salary>= @MINSALARY
+END;
+--Question 6 — Get Patients by Ward
+--Create a stored procedure that receives a ward ID and returns all patients assigned to that ward.
 
---Question 15 — Patients Who Received Medication
---Display patients who have at least one medication administration.
-
-SELECT P.Id, P.Name
-FROM Patients P
-JOIN DrugAdministrations D
-ON P.Id = D.PatientId;
-
---Question 16 — Patients Who Never Received Medication
---Display patients who have never received any medication.
-
-SELECT P.Id, P.Name , D.*
-FROM Patients P LEFT JOIN DrugAdministrations D
-ON P.Id = D.PatientId
-WHERE D.PatientId IS NULL
-
---Question 17 — Count Medication Administrations per Patient
---Display every patient together with the number of medication administrations they received.
---Question 18 — Total Medication Quantity per Patient
---Display every patient together with the total medication quantity administered to them.
-
-
---Question 19 — Derived Table for Consultant Salaries
---Create a derived table containing the average consultant salary, then display consultants whose salary is above that average.
---Question 20 — Patients with Above-Average Medication Quantity
---Display patients whose total medication quantity is greater than the average total medication quantity across patients who received medication.
-
---Question 20 — Patients with Above-Average Medication Quantity
---Display patients whose total medication quantity is greater than the average total medication quantity across patients who received medication.
-
-SELECT P.Name, COUNT(*) AS TotalMedication
-FROM Patients P
-JOIN DrugAdministrations D
-    ON P.Id = D.PatientId
-GROUP BY P.Id, P.Name
-HAVING COUNT(*) >
-(
-    SELECT AVG(TotalMedication * 1.0)
-    FROM
-    (
-        SELECT PatientId, COUNT(*) AS TotalMedication
-        FROM DrugAdministrations
-        GROUP BY PatientId
-    ) AS T
-)
-
-
---Question 21 — Create a Patient Backup
---Create a new table containing all patients.
-
-
-SELECT *
-INTO PatientsBackup
-FROM Patients
-
---Question 22 — Create a Basic Patient Information Table
---Create a new table containing only patient ID, name, and date of birth.
-
-SELECT ID ,NAME,DOB
-INTO PatientInformation 
-FROM Patients 
-
---Question 23 — Create a Consultant Salary Report
---Create a new table containing consultant ID, name, and salary.
-
-SELECT ID ,NAME ,Salary
-INTO ConsultantSalaryReport
-FROM Consultants 
-
---Question 24 — Create a Patient-Ward Report
---Create a new table containing each patient together with the ward they belong to.
-
-SELECT ID ,Name ,WardId
-INTO PatientWardReport
-FROM Patients 
-
---Question 25 — Create a Patient-Consultant Report
---Create a new table containing patients and their assigned consultants.
-
-SELECT  P.* ,C.Name 'CONSULTANT NAME'
-INTO PatientConsultantReport
-FROM Patients P, PatientExaminations PE , Consultants C
-WHERE P.Id = PE.PatientId AND PE.ConsultantId = C.Id
-
-
---Question 26 — Create a High-Salary Consultant Table
---Create a new table containing consultants whose salary is greater than 50000.
-
-SELECT *
-INTO HighSalary 
-FROM Consultants
-WHERE Salary > 50000
-
---Question 27 — Create a Young Patients Table
---Create a new table containing patients born after January 1, 2000.
-
-SELECT *
-INTO YoungPatients 
-FROM Patients
-WHERE DOB > '1-1-2000'
-
-
---Question 28 — Create a High-Salary Nurse Report
---Create a new table containing nurses earning more than 30000 together with the ward they serve in.
-
-SELECT NAME ,ServesInWardId
-INTO HighSalaryNurse
-FROM Nurses
-WHERE Salary > 30000
-
---Question 29 — Create a Ward Patient Summary
---Create a new table containing each ward and its patient count.
-
-SELECT WardId , COUNT(ID) 'NUM OF PATIONTS'
-INTO WardPationtsSamary
-FROM Patients 
-GROUP BY WardId
-
-
---Question 30 — Create a Patient Medication Summary
---Create a new table containing each patient and their total medication quantity.
-
-SELECT PatientId , SUM(DRUGCODE) 'Medication Quantity'
-INTO PatientMedicationSummary
-FROM DrugAdministrations 
-GROUP BY PatientId
-
-
---Question 31 — Calculate Patient Age
---Create a scalar function that receives a date of birth and returns the patient's age.
 GO
-CREATE OR ALTER FUNCTION CalcAge (@DOB DATE)
-RETURNS INT
+CREATE OR ALTER PROC GETPATIENTSBYWARDID
+@WARDID INT 
 AS
 BEGIN
-RETURN DATEDIFF(YEAR, @DOB, GETDATE())
-END
-GO
---Question 32 — Calculate Annual Salary
---Create a scalar function that receives a monthly salary and returns the annual salary.
-CREATE OR ALTER FUNCTION CalcAnnualSalary (@monthly DECIMAL(10,2))
-RETURNS DECIMAL (10,2)
-AS
-BEGIN
-RETURN @monthly * 12
-END
-GO
 
---Question 33 — Calculate Medication Cost
---Create a scalar function that receives quantity and unit price and returns the total medication cost.
-
-CREATE OR ALTER FUNCTION CalculateMedicationCost (@quantity INT ,@price DECIMAL(10,2))
-RETURNS DECIMAL(10,2)
-AS
-BEGIN
-RETURN @quantity *@price
-END
-GO
-
-
-
---Question 34 — Get Patients by Ward
---Create an inline table-valued function that receives a ward ID and returns all patients in that ward.
-
-CREATE OR ALTER FUNCTION GetPatientsbyWard(@WARDID INT)
-RETURNS TABLE 
-AS 
-RETURN 
-(
-SELECT NAME  
+SELECT * 
 FROM Patients
 WHERE WardId = @WARDID
-)
-GO
+END;
 
-SELECT *
-FROM DBO.GetPatientsbyWard(1)
---Question 35 — Get Consultants by Minimum Salary
---Create an inline table-valued function that receives a minimum salary and returns consultants whose salary is greater than or equal to it.
+EXEC GETPATIENTSBYWARDID 3
+--Question 7 — Return Patient Count
+--Create a stored procedure that returns the total number of patients through an OUTPUT parameter.
 
-GO
-CREATE OR ALTER FUNCTION GetConsultantsbyMinimumSalary(@MINSALARY DECIMAL(10,2))
-RETURNS TABLE 
-AS 
-RETURN 
-(
-SELECT NAME 
-FROM Consultants
-WHERE SALARY >= @MINSALARY
-)
-
---Question 36 — Get Patients with Their Ward
---Create an inline table-valued function that receives a ward ID and returns patients together with their ward name.
 
 GO
-CREATE OR ALTER FUNCTION GetPatientsWithWard(@WARDID INT)
-RETURNS TABLE 
-AS 
-RETURN 
-(
-SELECT p.Name , W.Name 'WARD NAME'
-FROM Patients p INNER JOIN Wards w
-ON P.WardId = W.ID
-WHERE P.WardId = @WARDID
-)
-GO
-SELECT *
-FROM DBO.GetPatientsWithWard(1)
---Question 37 — Get Patients Above a Specific Age
---Create a multi-statement table-valued function that receives a minimum age and returns patients who are at least that age.
-GO
-CREATE OR ALTER FUNCTION GetPatientsAboveSpecificAge (@MinAge INT)
-RETURNS @PatientsAbove TABLE
-(
-    ID INT PRIMARY KEY,
-    Name VARCHAR(20),
-    Age INT
-)
+CREATE OR ALTER PROC GETNUMOFPATIENTS
+@RESULT INT OUT
 AS
 BEGIN
 
-    INSERT INTO @PatientsAbove (ID, Name, Age)
-    SELECT 
-        ID,
-        Name,
-        DATEDIFF(YEAR, DOB, GETDATE())
-    FROM Patients
-    WHERE DATEDIFF(YEAR, DOB, GETDATE()) >= @MinAge;
+SELECT @RESULT = COUNT(*) 
+FROM Patients
+END;
 
-    RETURN;
-END
+DECLARE @COUNTER INT
+EXEC GETNUMOFPATIENTS @COUNTER OUT 
+SELECT @COUNTER
+--Question 8 — Return Average Consultant Salary
+--Create a stored procedure that returns the average consultant salary through an OUTPUT parameter.
+
+
 GO
+CREATE OR ALTER PROC GETAVGSALARY
+@AVERG DECIMAL(10,2) OUT
+AS
+BEGIN
 
---Question 38 — Get Patient Medication Summary
---Create a multi-statement table-valued function that receives a patient ID and returns the total medication quantity and number of medication administrations.
---Question 39 — Classify Consultant Salaries
---Create a multi-statement table-valued function that receives a minimum salary and returns consultants with a salary classification.
-CREATE OR ALTER FUNCTION ClassifyConsultantSalaries(@MinSalary DECIMAL(10,2))
-RETURNS @ClassifyConsultants TABLE
-(
-ID INT PRIMARY KEY, 
-NAME VARCHAR(10),
-SALARY DECIMAL(10,2)
-)
+SELECT @AVERG = AVG(SALARY) 
+FROM Consultants
+END;
+
+DECLARE @AVG DECIMAL(10,2)
+EXEC GETAVGSALARY @AVG OUT 
+
+SELECT @AVG
+
+--Question 9 — Return Patient Medication Quantity
+--Create a stored procedure that receives a patient ID and returns the total medication quantity through an OUTPUT parameter.
+
+
+
+--Question 10 — Increase a Salary
+--Create a stored procedure that receives a salary as an input-output parameter and increases it by a supplied percentage.
+
+
+GO
+CREATE OR ALTER PROC INCREES_SALARY
+@SALARY DECIMAL(10,2) OUT,
+@PERSENTEG DECIMAL(10,2)
+AS
+BEGIN
+
+SET @SALARY = @SALARY + @SALARY *(@PERSENTEG/100)
+END;
+
+DECLARE @SA DECIMAL(10,2) = 10000
+EXEC INCREES_SALARY @SA OUT ,50
+
+SELECT @SA
+
+--Question 11 — Increase Medication Quantity
+--Create a stored procedure that receives a quantity as input-output and adds an additional quantity to it.
+GO
+CREATE OR ALTER PROC IncreaseMedicationQuantity 
+@quantity DECIMAL(10,2) OUT,
+@additional DECIMAL(10,2)
 AS 
 BEGIN
-INSERT INTO @ClassifyConsultants (ID ,NAME ,SALARY)
-SELECT ID , NAME , Salary
-FROM Consultants
-WHERE Salary >@MINSALARY
-RETURN;
-END
+SET @quantity += @additional
+END;
+
+--Question 12 — Convert Monthly Salary to Annual Salary
+--Create a stored procedure that receives a monthly salary as input-output and replaces it with the annual salary.
+
+
 GO
+CREATE OR ALTER PROC ConvertMonthlySalarytoAnnualSalary 
+@SALARY DECIMAL(10,2) OUT
+AS 
+BEGIN
+SET @SALARY = @SALARY *12
+END;
+DECLARE @MONTHLY DECIMAL(10,2) = 15000
+EXEC ConvertMonthlySalarytoAnnualSalary @MONTHLY OUT
+SELECT @MONTHLY 'ANUAAL SALARY'
+--Question 13 — Insert Patient with Error Handling
+--Create a stored procedure that inserts a patient and handles errors using TRY-CATCH.
+GO
+CREATE OR ALTER PROC InsertPatient
+@NAME VARCHAR(30),
+@DOB DATE,
+@WARDID INT,
+@NEWID INT OUT
+AS
+BEGIN
+BEGIN TRY
+IF @DOB > GETDATE()
+    THROW 50001,'CAN NOT HAS DATE IN THE FUTCHER', 1;
+IF NOT EXISTS (SELECT 1 FROM Wards WHERE ID= @WARDID)
+    THROW 50002,'WARD ID NOT EXIST',1;
 
---Question 43 — Create a Consultant Salary Report Using a Scalar Function
---Create a new table containing each consultant's name, monthly salary, and annual salary.
+SELECT @NEWID = ISNULL(MAX(ID),0) +1
+FROM PATIENTS
 
-SELECT NAME , SALARY , DBO.CalcAnnualSalary(SALARY) 'ANNUAL SALARY'
-INTO ConsultantSalaryReport2
+INSERT INTO Patients 
+VALUES(@NEWID,@NAME,@DOB,@WARDID)
+PRINT 'Patient ADDED SUCESSFULY'
+END TRY 
+
+BEGIN CATCH
+SET @NEWID =NULL;
+SELECT ERROR_NUMBER() ,
+       ERROR_MESSAGE(),
+       ERROR_LINE()
+END CATCH
+
+END;
+
+DECLARE @NEW INT;
+EXEC InsertPatient
+    @NAME = 'ZYAD',
+   @DOB = '2027-05-10',
+    @WARDID = 3,
+    @NEWID = @NEW OUTPUT;
+
+SELECT @NEW AS NewID;
+
+
+
+--Question 14 — Update Consultant with Error Handling
+--Create a stored procedure that updates a consultant's salary and handles errors.
+GO
+CREATE OR ALTER PROC UpdateConsultant
+@ID INT ,
+@NAME VARCHAR(30) =NULL,
+@SALARY DECIMAL(10,2) =NULL
+AS 
+BEGIN
+UPDATE Consultants
+SET Name = ISNULL(@NAME,NAME),
+    Salary = ISNULL(@SALARY,SALARY)
+WHERE ID =@ID 
+
+IF @@ROWCOUNT >0
+   PRINT 'UBDATED SUCCESSFLY'
+ELSE 
+   PRINT 'UBDATE FAILED'
+END;
+
+EXEC UpdateConsultant 315 , 'DR.Zyad Mohamed'
+--Question 15 — Delete Patient with Error Handling
+--Create a stored procedure that deletes a patient and handles errors using TRY-CATCH.
+GO
+create or alter proc DeletePatient
+@ID INT 
+AS 
+BEGIN
+BEGIN TRY
+IF NOT EXISTS (SELECT 1 FROM Patients WHERE ID =@ID)
+   THROW 50004 , 'THIS ID NOT EXIST',1
+
+DELETE FROM Patients 
+WHERE ID =@ID
+
+END TRY 
+BEGIN CATCH
+PRINT 'DELETE FAILED'
+SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
+       ERROR_SEVERITY()
+
+END CATCH
+
+END;
+
+EXEC DeletePatient 301
+
+--Question 16 — Add a New Patient
+--Create a stored procedure that inserts a new patient.
+ -- DID IT BEFOR 
+
+--Question 17 — Add a New Consultant
+--Create a stored procedure that inserts a new consultant.
+
+GO
+CREATE OR ALTER PROC InsertConsultant
+@NAME VARCHAR(30),
+@SALARY DECIMAL(10,2),
+@NEWID INT OUT
+AS
+BEGIN
+BEGIN TRY
+
+
+
+SELECT @NEWID = ISNULL(MAX(ID),0) +1
 FROM Consultants
 
---Question 44 — Use an Inline TVF with a Filter
---Using GetConsultantsByMinimumSalary, display consultants whose salary is at least 50000 and whose name starts with A.
-SELECT Name
-FROM dbo.GetConsultantsByMinimumSalary(5000)
-WHERE Name LIKE 'Dr. A%'
+INSERT INTO Consultants 
+VALUES(@NEWID,@NAME,@SALARY)
+PRINT 'Consultant ADDED SUCESSFULY'
+END TRY 
 
---Question 45 — Use a Multi-Statement TVF
---Using GetPatientsWithAge, display patients who are at least 30 years old and order them from oldest to youngest.
-SELECT NAME ,AGE
-FROM DBO.GetPatientsAboveSpecificAge(30)
-ORDER BY AGE DESC
+BEGIN CATCH
+SET @NEWID =NULL;
+SELECT ERROR_NUMBER() ,
+       ERROR_MESSAGE(),
+       ERROR_LINE()
+END CATCH
 
---Question 46 — Final Hospital Patient Summary
---Display patient ID, patient name, ward name, patient age, number of medication administrations, and total medication quantity. Use the existing tables and CalculatePatientAge.
+END;
+
+
+--Question 18 — Record a Medication Administration
+--Create a stored procedure that inserts a new medication administration.
+
 GO
-SELECT P.Id ,P.Name , W.Name 'WARD NAME' , DBO.CalcAge(P.DOB) AS 'PATIENT AGE'
-,COUNT(DA.DrugCode) 'NUMBER OF MEDCATION ' 
-FROM Patients P ,Wards W , DrugAdministrations DA
-WHERE P.WardId = W.ID AND DA.PatientId = P.Id
-GROUP BY P.Id ,P.Name , W.Name , DBO.CalcAge(P.DOB)
+CREATE OR ALTER PROC InsertConsultant
+@NURSEID INT,
+@DRUGCODE INT,
+@PATIENTID INT ,
+@DOSAGE VARCHAR(50)
+AS
+BEGIN
+BEGIN TRY
 
+IF NOT EXISTS (SELECT 1 FROM Nurses WHERE @NURSEID = Number)
+       THROW 50005, 'THIS NURSE NOT EXIST',1
+
+IF NOT EXISTS (SELECT 1 FROM Patients WHERE @PATIENTID = ID)
+       THROW 50005, 'THIS PATIENT NOT EXIST',1
+
+INSERT INTO DrugAdministrations 
+VALUES(@NURSEID,@DRUGCODE,@PATIENTID ,@DOSAGE,CAST(GETDATE() AS DATE), CAST(GETDATE() AS TIME))
+PRINT 'DrugAdministration ADDED SUCESSFULY'
+END TRY 
+
+BEGIN CATCH
+SELECT ERROR_NUMBER() ,
+       ERROR_MESSAGE(),
+       ERROR_LINE()
+END CATCH
+
+END;
+
+--Question 19 — Update Patient Information
+--Create a stored procedure that updates a patient's name, date of birth, and ward.
+
+GO
+CREATE OR ALTER PROC UpdatePatient
+@ID INT,
+@DOB DATE = NULL ,
+@NAME VARCHAR(30) =NULL,
+@WARDID DECIMAL(10,2) =NULL
+AS 
+BEGIN
+BEGIN TRY 
+IF NOT EXISTS (SELECT 1 FROM Wards WHERE ID= @WARDID)
+    THROW 50002,'WARD ID NOT EXIST',1;
+UPDATE Patients
+SET Name = ISNULL(@NAME,NAME),
+    WARDID = ISNULL(@WARDID,WardId),
+    DOB = ISNULL(@DOB, DOB)
+WHERE ID =@ID 
+
+IF @@ROWCOUNT >0
+   PRINT 'UBDATED SUCCESSFLY'
+ELSE 
+   PRINT 'UBDATE FAILED'
+END TRY
+BEGIN CATCH
+SELECT ERROR_NUMBER() ,
+       ERROR_MESSAGE(),
+       ERROR_LINE()
+
+END CATCH 
+END;
+
+--Question 20 — Update Consultant Salary
+--Create a stored procedure that changes a consultant's salary.
+
+GO
+CREATE OR ALTER PROC UpdateConsultantSalary
+@ID INT ,
+@SALARY DECIMAL(10,2) =NULL
+AS 
+BEGIN
+UPDATE Consultants
+SET 
+    Salary = ISNULL(@SALARY,SALARY)
+WHERE ID =@ID 
+
+IF @@ROWCOUNT >0
+   PRINT 'UBDATED SUCCESSFLY'
+ELSE 
+   PRINT 'UBDATE FAILED'
+END;
+
+--Question 21 — Increase Nurse Salary
+--Create a stored procedure that increases a nurse's salary by a percentage.
+
+
+GO
+CREATE OR ALTER PROC UpdateNurseSalary
+@ID INT ,
+@SALARY DECIMAL(10,2) =NULL
+AS 
+BEGIN
+UPDATE Nurses
+SET 
+    Salary = ISNULL(@SALARY,SALARY)
+WHERE Number =@ID 
+
+IF @@ROWCOUNT >0
+   PRINT 'UBDATED SUCCESSFLY'
+ELSE 
+   PRINT 'UBDATE FAILED'
+END;
+
+--Question 22 — Delete a Patient
+--Create a stored procedure that deletes a patient by ID.
+  -- DID IT BEFOR
+
+--Question 23 — Delete a Consultant
+--Create a stored procedure that deletes a consultant by ID.
+
+GO
+create or alter proc DeleteConsultant
+@ID INT 
+AS 
+BEGIN
+BEGIN TRY
+IF NOT EXISTS (SELECT 1 FROM Consultants WHERE ID =@ID)
+   THROW 50004 , 'THIS ID NOT EXIST',1
+
+DELETE FROM Consultants 
+WHERE ID =@ID
+
+END TRY 
+BEGIN CATCH
+PRINT 'DELETE FAILED'
+SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
+       ERROR_SEVERITY()
+
+END CATCH
+
+END;
+
+
+--Question 24 — Delete a Medication Administration
+--Create a stored procedure that deletes a medication administration using its identifying columns.
+
+GO
+create or alter proc MedicationAdministration
+@PATIENTID INT ,
+@DRUGCODE INT,
+@NURSEID INT,
+@DATE DATE,
+@TIME TIME(7)
+AS 
+BEGIN
+BEGIN TRY
+IF NOT EXISTS (SELECT 1 FROM DrugAdministrations 
+WHERE PatientId =@PATIENTID 
+AND
+@DRUGCODE =DrugCode 
+AND
+@DATE =DATE 
+AND 
+@TIME = TIME
+AND 
+@NURSEID =NurseId
+)
+   THROW 50004 , 'THIS ID NOT EXIST',1
+
+DELETE FROM DrugAdministrations 
+WHERE PatientId =@PATIENTID 
+AND
+@DRUGCODE =DrugCode 
+AND
+@DATE =DATE 
+AND 
+@TIME = TIME
+AND 
+@NURSEID =NurseId
+
+END TRY 
+BEGIN CATCH
+PRINT 'DELETE FAILED'
+SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
+       ERROR_SEVERITY()
+
+END CATCH
+
+END;
+
+--Question 48 — Stored Procedure Returning Multiple Statistics
+--Create a stored procedure that returns total patients, total consultants, average consultant salary, and total medication quantity.
+GO
+CREATE OR ALTER PROC MultipleStatistics
+
+AS 
+BEGIN
+
+SELECT COUNT(*) 'TOTAL CONSULTATNS '
+, AVG(Salary) 'AVERGE CONSLTANT SALARY '
+FROM Consultants
+
+SELECT COUNT(*) 'TOTAL PATIENTS'
+FROM Patients 
+
+SELECT COUNT(*)
+FROM DrugAdministrations AS TOTALADMENSTRATION
+END;
+
+EXEC MultipleStatistics
+GO
+--Question 49 — Stored Procedure with OUTPUT and TRY-CATCH
+--Create a stored procedure that receives a patient ID and returns total medication quantity through an OUTPUT parameter. Handle errors using TRY-CATCH.
+
+-- I CAN NOT CALC TOTAL BECAUSE DOSAGE IS STRING NOT INT 
+
+--Question 50 — Final Hospital Patient Summary
+--Create a stored procedure that receives a patient ID and returns patient information, ward name, number of medication administrations, and total medication quantity. Use TRY-CATCH.
+CREATE OR ALTER PROC PatientSummary
+    @ID INT
+AS
+BEGIN
+    BEGIN TRY
+
+        IF NOT EXISTS
+        (
+            SELECT 1
+            FROM Patients
+            WHERE ID = @ID
+        )
+            THROW 50006, 'THIS ID NOT EXIST', 1;
+
+        SELECT
+            P.Id,
+            P.Name,
+            P.DOB,
+            W.Name AS [WARD NAME],
+            COUNT(DA.DrugCode) AS [Number Of Medication Administrations]
+        FROM Patients P
+        JOIN Wards W
+            ON P.WardId = W.Id
+
+        LEFT JOIN DrugAdministrations DA
+            ON P.Id = DA.PatientId
+
+        WHERE P.Id = @ID
+
+        GROUP BY
+            P.Id,
+            P.Name,
+            P.DOB,
+            W.Name;
+
+    END TRY
+
+    BEGIN CATCH
+
+        SELECT
+            ERROR_NUMBER() AS ErrorNumber,
+            ERROR_MESSAGE() AS ErrorMessage,
+            ERROR_SEVERITY() AS ErrorSeverity;
+
+    END CATCH
+END;
