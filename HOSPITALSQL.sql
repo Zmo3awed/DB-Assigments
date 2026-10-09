@@ -1,558 +1,376 @@
---ASP.Net Course 
---Question 1 — Display All Patients
---Create a stored procedure that returns all patients.
+--Question 29 - Create an AFTER INSERT Trigger
+--Create an AFTER INSERT trigger that records every newly inserted patient in PatientAudit.
 
-CREATE OR ALTER PROC GETALLPATIENTS
+CREATE TABLE PatientAudit02 
+(
+ID INT IDENTITY PRIMARY KEY ,
+PID INT ,
+ACTION VARCHAR(10),
+TIME DATETIME
+)
+GO
+CREATE OR ALTER TRIGGER INSERT_PATIENT
+ON PATIENTS
+AFTER INSERT
+AS
+BEGIN 
+
+INSERT INTO PatientAudit02
+SELECT ID ,'INSERTION',GETDATE()
+FROM inserted
+
+END;
+
+INSERT INTO Patients
+VALUES
+    (401, 'Ali',  '20000101', 1),
+    (402, 'Omar', '20010101', 1),
+    (403, 'Ziad', '20020101', 1);
+SELECT *
+FROM PatientAudit02
+
+--Question 30 - Audit Consultant Salary Changes
+--Create an audit table and an AFTER UPDATE trigger that stores the old and new consultant salary.
+CREATE TABLE ConsultantSalaryAudit02
+(
+ID INT IDENTITY PRIMARY KEY ,
+CID INT ,
+OLD INT,
+NEW INT,
+ACTION VARCHAR(10),
+TIME DATETIME
+)
+GO
+CREATE OR ALTER TRIGGER UPDATE_CSALARY
+ON ConsultantS
+AFTER UPDATE
+AS 
+BEGIN
+IF NOT UPDATE(SALARY)
+   RETURN;
+INSERT INTO ConsultantSalaryAudit02
+SELECT I.Id ,D.Salary ,I.Salary ,'UPDATED',GETDATE()
+FROM inserted I INNER JOIN deleted D
+ON I.Id = d.ID
+END;
+
+--Question 31 - Audit Patient Ward Changes
+--Create a trigger that records the old and new ward whenever a patient's ward changes.
+GO
+CREATE OR ALTER TRIGGER UPDATE_PWARDID
+ON PATIENTS
+AFTER UPDATE
+AS 
+BEGIN
+IF NOT UPDATE(WARDID)
+   RETURN;
+INSERT INTO -- ASSUM TABLE TO INSERT IT
+SELECT I.ID ,D.WardId ,I.WardId ,'UPDATED',GETDATE()
+FROM inserted I INNER JOIN deleted D
+ON I.Id = d.ID
+END;
+
+--Question 32 - Archive Deleted Patients
+--Create a table for deleted patients and an AFTER DELETE trigger that stores deleted patient information.
+
+GO
+CREATE OR ALTER TRIGGER DELETE_PATIENT
+ON PATIENTS
+AFTER DELETE
+AS
+BEGIN 
+
+INSERT INTO --ASSUM THERE IS A DELETED TABLE
+SELECT ID ,'DELETE',GETDATE()
+FROM deleted
+END;
+
+--Question 33 - Audit Deleted Consultants
+--Create an AFTER DELETE trigger that stores deleted consultant information.
+GO
+CREATE OR ALTER TRIGGER DELETE_CONSULTANT
+ON PATIENTS
+AFTER DELETE
+AS
+BEGIN 
+
+INSERT INTO --ASSUM THERE IS A DELETED TABLE
+SELECT ID ,NAME,SALARY,'DELETE',GETDATE()
+FROM deleted
+END;
+
+
+
+--Question 34 - Compare Old and New Consultant Salary
+--Create an AFTER UPDATE trigger that displays the old and new salary of the consultant.
+-- REBEATED 
+--Question 35 - Compare Old and New Patient Ward
+--Create an AFTER UPDATE trigger that displays the patient's old ward and new ward.
+
+--DID BEFORE
+
+--Question 36 - Handle Multiple Inserted Rows
+--Create an AFTER INSERT trigger that records every patient inserted by a single statement. Then insert three patients in one statement.
+
+-- SAME SINGLE INSERT TRIGGER
+
+--Question 37 - Prevent Patients Without a Ward
+--Create an INSTEAD OF INSERT trigger that prevents inserting a patient when Wardld is NULL.
+
+GO
+CREATE OR ALTER TRIGGER PREVENT_NULL
+ON PATIENTS
+INSTEAD OF INSERT
 AS
 BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted
+        WHERE WardId IS NULL
+    )
+    BEGIN
+        THROW 50001, 'WardId cannot be NULL', 1;
+    END;
+
+    INSERT INTO Patients
+    SELECT *
+    FROM inserted;
+END;
+GO
+
+--Question 38 - Validate Patient Date of Birth
+--Create an INSTEAD OF INSERT trigger that prevents patients whose date of birth is in the future.
+
+CREATE OR ALTER TRIGGER PREVINT_FUTER_DATE
+ON PATIENTS
+INSTEAD OF INSERT 
+AS
+BEGIN 
+IF EXISTS (SELECT 1 FROM inserted WHERE DOB> GETDATE())
+   BEGIN
+   THROW 50002 ,'CAN NOT BE I THE FUTURE',1
+   END
+INSERT INTO Patients 
+SELECT *
+FROM inserted
+
+
+
+END;
+
+--Question 39 - Prevent Consultant Salary Reduction
+--Create an INSTEAD OF UPDATE trigger that prevents reducing a consultant's salary.
+
+
+GO
+CREATE OR ALTER TRIGGER PREVINT_REDUCE_SALARY
+ON CONSULTANTS
+INSTEAD OF UPDATE
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted I
+        JOIN deleted D ON I.Id = D.Id
+        WHERE I.Salary < D.Salary
+    )
+    BEGIN
+        THROW 50003, 'SALARY CANNOT BE REDUCED', 1;
+    END;
+
+    UPDATE C
+    SET C.Name = I.Name,
+        C.Salary = I.Salary
+    FROM Consultants C
+    JOIN inserted I ON C.Id = I.Id;
+END;
+GO
+
+
+--Question 40 - Control Patient Updates
+--Create an INSTEAD OF UPDATE trigger that allows patient information to be updated without changing the patient ID.
+
+GO
+CREATE OR ALTER TRIGGER PREVINT_EDIT_ID
+ON PATIENTS
+INSTEAD OF UPDATE
+AS
+BEGIN
+
+
+    UPDATE P
+    SET P.Name = I.Name,
+        P.DOB = I.DOB,
+        P.WardId = I.WardId
+    FROM Patients P
+    JOIN inserted I ON P.Id = I.Id;
+END;
+
+
+UPDATE PATIENTS
+SET NAME ='MOHAMED'
+WHERE  ID =1
+
+--Question 41 - Prevent Patient Deletion
+--Create an INSTEAD OF DELETE trigger that prevents patients from being deleted directly.
+GO
+
+CREATE OR ALTER TRIGGER PREVENT_DELETE
+ON Patients
+INSTEAD OF DELETE
+AS
+BEGIN
+    THROW 50005, 'DELETE IS NOT ALLOWED', 1;
+END;
+GO
+
+--Question 42 — Archive Before Delete
+--Create an INSTEAD OF DELETE trigger that first stores the deleted patient in DeletedPatients, then deletes the patient from Patients.
+
+CREATE OR ALTER TRIGGER PREVENT_DELETE
+ON Patients
+INSTEAD OF DELETE
+AS
+BEGIN
+INSERT INTO -- ASSUM TABLE CREATED
+SELECT *
+FROM deleted
+
+    DELETE P
+    FROM Patients P
+    INNER JOIN deleted D
+        ON P.ID = D.ID;
+END;
+GO
+
+--Question 43 — Add Patient with Audit Trigger
+--Create a stored procedure that adds a patient and an AFTER INSERT trigger that records the new patient in PatientAudit. Then execute the procedure.
+CREATE OR ALTER PROC Add_Patient
+@ID INT ,
+@NAME VARCHAR(50),
+@DOB DATE ,
+@WARDID INT
+AS
+BEGIN
+INSERT INTO Patients
+VALUES (@ID,@NAME,@DOB,@WARDID)
+END;
+
+EXEC Add_Patient 409 ,'ADEL' ,'2000-10-05',2
+--Question 44 — Update Consultant with Salary Audit
+--Create a stored procedure to update a consultant salary and an AFTER UPDATE trigger to record the old and new salary. 
+GO
+CREATE OR ALTER PROC UPDATE_SALARY
+@ID INT ,
+@NEW INT
+AS
+BEGIN
+UPDATE Consultants
+SET SALARY = @NEW
+WHERE ID = @ID 
+END;
+
+--Question 45 — Delete Patient and Archive the Record 
+--Create a stored procedure that deletes a patient and a trigger that automatically archives the deleted patient.
+GO
+CREATE OR ALTER PROC DELETE_Patient
+@ID INT 
+AS
+BEGIN
+DELETE Patients
+WHERE ID=@ID
+END; 
+EXEC DELETE_Patient 1
+
+------------------------------- INDEX ------------------------------------------
+
+--Question 1 — Create a Clustered Index
+--Create PatientIndexDemo with PatientId, PatientName, DOB, and WardId. Copy data from Patients, then create a clustered index on PatientId.
 
 SELECT *
-FROM Patients
-END;
-GO
-
-
-EXEC GETALLPATIENTS 
-
-
---Question 2 — Display All Consultants
---Create a stored procedure that returns all consultants with their salaries.
-
---Create a stored procedure that returns all patients.
-GO
-CREATE OR ALTER PROC GETALLConsultants
-AS
-BEGIN
-
-SELECT NAME , SALARY
-FROM Consultants
-END;
-
-EXEC GETALLConsultants
-
---Question 3 — Display Patients with Their Wards
---Create a stored procedure that displays every patient together with the ward they belong to.
-
-GO
-CREATE OR ALTER PROC GETALLPATIENTSWITHWARDID
-AS
-BEGIN
-
-SELECT P.Name , W.Name 'WARD NAME'
-FROM Patients P INNER JOIN WARDS W
-ON P.WardId = W.ID
-END;
-
---Question 4 — Get Patient by ID
---Create a stored procedure that receives a patient ID and returns that patient.
-
-GO
-CREATE OR ALTER PROC GETPATIENTBYID
-@ID INT
-AS
-BEGIN
-
-SELECT NAME 
-FROM Patients 
-WHERE ID = @ID
-END;
-
-EXEC GETPATIENTBYID 299
-
---Question 5 — Get Consultants by Minimum Salary
---Create a stored procedure that receives a minimum salary and returns consultants whose salary is greater than or equal to it.
-
-GO
-CREATE OR ALTER PROC GETHIGHSALARYCON
-@MINSALARY DECIMAL (18,2)
-AS
-BEGIN
-
-SELECT NAME , SALARY
-FROM Consultants
-WHERE Salary>= @MINSALARY
-END;
---Question 6 — Get Patients by Ward
---Create a stored procedure that receives a ward ID and returns all patients assigned to that ward.
-
-GO
-CREATE OR ALTER PROC GETPATIENTSBYWARDID
-@WARDID INT 
-AS
-BEGIN
-
-SELECT * 
-FROM Patients
-WHERE WardId = @WARDID
-END;
-
-EXEC GETPATIENTSBYWARDID 3
---Question 7 — Return Patient Count
---Create a stored procedure that returns the total number of patients through an OUTPUT parameter.
-
-
-GO
-CREATE OR ALTER PROC GETNUMOFPATIENTS
-@RESULT INT OUT
-AS
-BEGIN
-
-SELECT @RESULT = COUNT(*) 
-FROM Patients
-END;
-
-DECLARE @COUNTER INT
-EXEC GETNUMOFPATIENTS @COUNTER OUT 
-SELECT @COUNTER
---Question 8 — Return Average Consultant Salary
---Create a stored procedure that returns the average consultant salary through an OUTPUT parameter.
-
-
-GO
-CREATE OR ALTER PROC GETAVGSALARY
-@AVERG DECIMAL(10,2) OUT
-AS
-BEGIN
-
-SELECT @AVERG = AVG(SALARY) 
-FROM Consultants
-END;
-
-DECLARE @AVG DECIMAL(10,2)
-EXEC GETAVGSALARY @AVG OUT 
-
-SELECT @AVG
-
---Question 9 — Return Patient Medication Quantity
---Create a stored procedure that receives a patient ID and returns the total medication quantity through an OUTPUT parameter.
-
-
-
---Question 10 — Increase a Salary
---Create a stored procedure that receives a salary as an input-output parameter and increases it by a supplied percentage.
-
-
-GO
-CREATE OR ALTER PROC INCREES_SALARY
-@SALARY DECIMAL(10,2) OUT,
-@PERSENTEG DECIMAL(10,2)
-AS
-BEGIN
-
-SET @SALARY = @SALARY + @SALARY *(@PERSENTEG/100)
-END;
-
-DECLARE @SA DECIMAL(10,2) = 10000
-EXEC INCREES_SALARY @SA OUT ,50
-
-SELECT @SA
-
---Question 11 — Increase Medication Quantity
---Create a stored procedure that receives a quantity as input-output and adds an additional quantity to it.
-GO
-CREATE OR ALTER PROC IncreaseMedicationQuantity 
-@quantity DECIMAL(10,2) OUT,
-@additional DECIMAL(10,2)
-AS 
-BEGIN
-SET @quantity += @additional
-END;
-
---Question 12 — Convert Monthly Salary to Annual Salary
---Create a stored procedure that receives a monthly salary as input-output and replaces it with the annual salary.
-
-
-GO
-CREATE OR ALTER PROC ConvertMonthlySalarytoAnnualSalary 
-@SALARY DECIMAL(10,2) OUT
-AS 
-BEGIN
-SET @SALARY = @SALARY *12
-END;
-DECLARE @MONTHLY DECIMAL(10,2) = 15000
-EXEC ConvertMonthlySalarytoAnnualSalary @MONTHLY OUT
-SELECT @MONTHLY 'ANUAAL SALARY'
---Question 13 — Insert Patient with Error Handling
---Create a stored procedure that inserts a patient and handles errors using TRY-CATCH.
-GO
-CREATE OR ALTER PROC InsertPatient
-@NAME VARCHAR(30),
-@DOB DATE,
-@WARDID INT,
-@NEWID INT OUT
-AS
-BEGIN
-BEGIN TRY
-IF @DOB > GETDATE()
-    THROW 50001,'CAN NOT HAS DATE IN THE FUTCHER', 1;
-IF NOT EXISTS (SELECT 1 FROM Wards WHERE ID= @WARDID)
-    THROW 50002,'WARD ID NOT EXIST',1;
-
-SELECT @NEWID = ISNULL(MAX(ID),0) +1
+INTO PatientIndexDemo
 FROM PATIENTS
-
-INSERT INTO Patients 
-VALUES(@NEWID,@NAME,@DOB,@WARDID)
-PRINT 'Patient ADDED SUCESSFULY'
-END TRY 
-
-BEGIN CATCH
-SET @NEWID =NULL;
-SELECT ERROR_NUMBER() ,
-       ERROR_MESSAGE(),
-       ERROR_LINE()
-END CATCH
-
-END;
-
-DECLARE @NEW INT;
-EXEC InsertPatient
-    @NAME = 'ZYAD',
-   @DOB = '2027-05-10',
-    @WARDID = 3,
-    @NEWID = @NEW OUTPUT;
-
-SELECT @NEW AS NewID;
-
-
-
---Question 14 — Update Consultant with Error Handling
---Create a stored procedure that updates a consultant's salary and handles errors.
 GO
-CREATE OR ALTER PROC UpdateConsultant
-@ID INT ,
-@NAME VARCHAR(30) =NULL,
-@SALARY DECIMAL(10,2) =NULL
-AS 
-BEGIN
-UPDATE Consultants
-SET Name = ISNULL(@NAME,NAME),
-    Salary = ISNULL(@SALARY,SALARY)
-WHERE ID =@ID 
+CREATE CLUSTERED INDEX IX_ID
+ON PatientIndexDemo(ID)
 
-IF @@ROWCOUNT >0
-   PRINT 'UBDATED SUCCESSFLY'
-ELSE 
-   PRINT 'UBDATE FAILED'
-END;
-
-EXEC UpdateConsultant 315 , 'DR.Zyad Mohamed'
---Question 15 — Delete Patient with Error Handling
---Create a stored procedure that deletes a patient and handles errors using TRY-CATCH.
+--Question 2 — Create Another Clustered Index
+--Create ConsultantIndexDemo containing ConsultantId, ConsultantName, and Salary. Copy data from Consultants, then create a clustered index on ConsultantId.
+SELECT *
+INTO ConsultantIndexDemo
+FROM CONSULTANTS
 GO
-create or alter proc DeletePatient
-@ID INT 
-AS 
-BEGIN
-BEGIN TRY
-IF NOT EXISTS (SELECT 1 FROM Patients WHERE ID =@ID)
-   THROW 50004 , 'THIS ID NOT EXIST',1
+CREATE CLUSTERED INDEX IX_CONSULTANT_ID
+ON ConsultantIndexDemo(ID)
 
-DELETE FROM Patients 
-WHERE ID =@ID
-
-END TRY 
-BEGIN CATCH
-PRINT 'DELETE FAILED'
-SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
-       ERROR_SEVERITY()
-
-END CATCH
-
-END;
-
-EXEC DeletePatient 301
-
---Question 16 — Add a New Patient
---Create a stored procedure that inserts a new patient.
- -- DID IT BEFOR 
-
---Question 17 — Add a New Consultant
---Create a stored procedure that inserts a new consultant.
-
+--Question 3 — Index Patients by Ward
+--Create a nonclustered index on Patients.WardId to improve searches that retrieve patients based on their ward.
 GO
-CREATE OR ALTER PROC InsertConsultant
-@NAME VARCHAR(30),
-@SALARY DECIMAL(10,2),
-@NEWID INT OUT
-AS
-BEGIN
-BEGIN TRY
+CREATE NONCLUSTERED INDEX IX_PATIENT_WARDID
+ON PatientIndexDemo(WARDID)
 
 
-
-SELECT @NEWID = ISNULL(MAX(ID),0) +1
-FROM Consultants
-
-INSERT INTO Consultants 
-VALUES(@NEWID,@NAME,@SALARY)
-PRINT 'Consultant ADDED SUCESSFULY'
-END TRY 
-
-BEGIN CATCH
-SET @NEWID =NULL;
-SELECT ERROR_NUMBER() ,
-       ERROR_MESSAGE(),
-       ERROR_LINE()
-END CATCH
-
-END;
+--Question 4 — Index Consultants by Salary
+--Create a nonclustered index on Consultants.Salary.
+CREATE NONCLUSTERED INDEX IX_CONSULTANT_SALARY
+ON ConsultantIndexDemo(SALARY)
 
 
---Question 18 — Record a Medication Administration
---Create a stored procedure that inserts a new medication administration.
-
+--Question 5 — Create a Composite Nonclustered Index
+--Create a nonclustered index on DrugAdministrations using PatientId and DrugCode.
+GO 
+CREATE NONCLUSTERED INDEX IX_ID_DRUGCODE
+ON DrugAdministrations(PatientId ,DRUGCODE)
+--Question 6 — Create a Nonclustered Index with Included Columns
+--Create a nonclustered index on Patients.WardId and include Name and DOB.
 GO
-CREATE OR ALTER PROC InsertConsultant
-@NURSEID INT,
-@DRUGCODE INT,
-@PATIENTID INT ,
-@DOSAGE VARCHAR(50)
-AS
-BEGIN
-BEGIN TRY
-
-IF NOT EXISTS (SELECT 1 FROM Nurses WHERE @NURSEID = Number)
-       THROW 50005, 'THIS NURSE NOT EXIST',1
-
-IF NOT EXISTS (SELECT 1 FROM Patients WHERE @PATIENTID = ID)
-       THROW 50005, 'THIS PATIENT NOT EXIST',1
-
-INSERT INTO DrugAdministrations 
-VALUES(@NURSEID,@DRUGCODE,@PATIENTID ,@DOSAGE,CAST(GETDATE() AS DATE), CAST(GETDATE() AS TIME))
-PRINT 'DrugAdministration ADDED SUCESSFULY'
-END TRY 
-
-BEGIN CATCH
-SELECT ERROR_NUMBER() ,
-       ERROR_MESSAGE(),
-       ERROR_LINE()
-END CATCH
-
-END;
-
---Question 19 — Update Patient Information
---Create a stored procedure that updates a patient's name, date of birth, and ward.
-
+CREATE NONCLUSTERED INDEX IX_PATIENT_WARDID_INCLUDED
+ON PatientIndexDemo (WARDID)
+INCLUDE (NAME, DOB);
+--Question 7 — Unique Consultant Names
+--Create a unique index on Consultants.Name to prevent duplicate consultant names.
 GO
-CREATE OR ALTER PROC UpdatePatient
-@ID INT,
-@DOB DATE = NULL ,
-@NAME VARCHAR(30) =NULL,
-@WARDID DECIMAL(10,2) =NULL
-AS 
-BEGIN
-BEGIN TRY 
-IF NOT EXISTS (SELECT 1 FROM Wards WHERE ID= @WARDID)
-    THROW 50002,'WARD ID NOT EXIST',1;
-UPDATE Patients
-SET Name = ISNULL(@NAME,NAME),
-    WARDID = ISNULL(@WARDID,WardId),
-    DOB = ISNULL(@DOB, DOB)
-WHERE ID =@ID 
+CREATE UNIQUE NONCLUSTERED INDEX IX_Consultants_Name
+ON ConsultantIndexDemo(NAME)
 
-IF @@ROWCOUNT >0
-   PRINT 'UBDATED SUCCESSFLY'
-ELSE 
-   PRINT 'UBDATE FAILED'
-END TRY
-BEGIN CATCH
-SELECT ERROR_NUMBER() ,
-       ERROR_MESSAGE(),
-       ERROR_LINE()
+--Question 8 — Composite Unique Index
+--Create PatientDrugAssignmentDemo with PatientId, DrugCode, and StartDate. Create a unique composite index on PatientId and DrugCode.
+SELECT *
+INTO PatientDrugAssignmentDemo
+FROM DrugAdministrations
 
-END CATCH 
-END;
+CREATE UNIQUE NONCLUSTERED INDEX IX_DRUG
+ON PatientDrugAssignmentDemo(PATIENTID,DRUGCODE)
 
---Question 20 — Update Consultant Salary
---Create a stored procedure that changes a consultant's salary.
+--Question 9 — Test the Unique Index
+--Insert one valid row into PatientDrugAssignmentDemo, then attempt to insert the same PatientId and DrugCode again with a different date.
 
+-- THERE IS AN DUBLICATION ALEEDY , SO WE CAN NOT APPLY UNIQE INDEX
+
+--Question 10 — Display Indexes
+--Display the indexes defined on the Patients table.
+EXEC sp_helpindex 'Patients';
+
+
+
+--Question 11 — Find Indexes from System Catalogs
+--Display table name, index name, and index type for all indexes in the Hospital database.
+
+SELECT I.object_id,OBJECT_NAME(I.object_id) , I.name  
+FROM sys.indexes AS I
+
+--Question 12 — Drop a Nonclustered Index
+--Remove the index created in Question 4.
+DROP INDEX IX_CONSULTANT_SALARY
+ON ConsultantIndexDemo
+--Question 13 — Create an Index for Patient Searches
+--Create a nonclustered index that can help queries searching patients by WardId and DOB.
 GO
-CREATE OR ALTER PROC UpdateConsultantSalary
-@ID INT ,
-@SALARY DECIMAL(10,2) =NULL
-AS 
-BEGIN
-UPDATE Consultants
-SET 
-    Salary = ISNULL(@SALARY,SALARY)
-WHERE ID =@ID 
+CREATE  NONCLUSTERED INDEX IX_WARD_DOB
+ON PatientIndexDemo(WARDID,DOB)
 
-IF @@ROWCOUNT >0
-   PRINT 'UBDATED SUCCESSFLY'
-ELSE 
-   PRINT 'UBDATE FAILED'
-END;
-
---Question 21 — Increase Nurse Salary
---Create a stored procedure that increases a nurse's salary by a percentage.
-
-
-GO
-CREATE OR ALTER PROC UpdateNurseSalary
-@ID INT ,
-@SALARY DECIMAL(10,2) =NULL
-AS 
-BEGIN
-UPDATE Nurses
-SET 
-    Salary = ISNULL(@SALARY,SALARY)
-WHERE Number =@ID 
-
-IF @@ROWCOUNT >0
-   PRINT 'UBDATED SUCCESSFLY'
-ELSE 
-   PRINT 'UBDATE FAILED'
-END;
-
---Question 22 — Delete a Patient
---Create a stored procedure that deletes a patient by ID.
-  -- DID IT BEFOR
-
---Question 23 — Delete a Consultant
---Create a stored procedure that deletes a consultant by ID.
-
-GO
-create or alter proc DeleteConsultant
-@ID INT 
-AS 
-BEGIN
-BEGIN TRY
-IF NOT EXISTS (SELECT 1 FROM Consultants WHERE ID =@ID)
-   THROW 50004 , 'THIS ID NOT EXIST',1
-
-DELETE FROM Consultants 
-WHERE ID =@ID
-
-END TRY 
-BEGIN CATCH
-PRINT 'DELETE FAILED'
-SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
-       ERROR_SEVERITY()
-
-END CATCH
-
-END;
-
-
---Question 24 — Delete a Medication Administration
---Create a stored procedure that deletes a medication administration using its identifying columns.
-
-GO
-create or alter proc MedicationAdministration
-@PATIENTID INT ,
-@DRUGCODE INT,
-@NURSEID INT,
-@DATE DATE,
-@TIME TIME(7)
-AS 
-BEGIN
-BEGIN TRY
-IF NOT EXISTS (SELECT 1 FROM DrugAdministrations 
-WHERE PatientId =@PATIENTID 
-AND
-@DRUGCODE =DrugCode 
-AND
-@DATE =DATE 
-AND 
-@TIME = TIME
-AND 
-@NURSEID =NurseId
-)
-   THROW 50004 , 'THIS ID NOT EXIST',1
-
-DELETE FROM DrugAdministrations 
-WHERE PatientId =@PATIENTID 
-AND
-@DRUGCODE =DrugCode 
-AND
-@DATE =DATE 
-AND 
-@TIME = TIME
-AND 
-@NURSEID =NurseId
-
-END TRY 
-BEGIN CATCH
-PRINT 'DELETE FAILED'
-SELECT ERROR_NUMBER(),ERROR_MESSAGE(),
-       ERROR_SEVERITY()
-
-END CATCH
-
-END;
-
---Question 48 — Stored Procedure Returning Multiple Statistics
---Create a stored procedure that returns total patients, total consultants, average consultant salary, and total medication quantity.
-GO
-CREATE OR ALTER PROC MultipleStatistics
-
-AS 
-BEGIN
-
-SELECT COUNT(*) 'TOTAL CONSULTATNS '
-, AVG(Salary) 'AVERGE CONSLTANT SALARY '
-FROM Consultants
-
-SELECT COUNT(*) 'TOTAL PATIENTS'
-FROM Patients 
-
-SELECT COUNT(*)
-FROM DrugAdministrations AS TOTALADMENSTRATION
-END;
-
-EXEC MultipleStatistics
-GO
---Question 49 — Stored Procedure with OUTPUT and TRY-CATCH
---Create a stored procedure that receives a patient ID and returns total medication quantity through an OUTPUT parameter. Handle errors using TRY-CATCH.
-
--- I CAN NOT CALC TOTAL BECAUSE DOSAGE IS STRING NOT INT 
-
---Question 50 — Final Hospital Patient Summary
---Create a stored procedure that receives a patient ID and returns patient information, ward name, number of medication administrations, and total medication quantity. Use TRY-CATCH.
-CREATE OR ALTER PROC PatientSummary
-    @ID INT
-AS
-BEGIN
-    BEGIN TRY
-
-        IF NOT EXISTS
-        (
-            SELECT 1
-            FROM Patients
-            WHERE ID = @ID
-        )
-            THROW 50006, 'THIS ID NOT EXIST', 1;
-
-        SELECT
-            P.Id,
-            P.Name,
-            P.DOB,
-            W.Name AS [WARD NAME],
-            COUNT(DA.DrugCode) AS [Number Of Medication Administrations]
-        FROM Patients P
-        JOIN Wards W
-            ON P.WardId = W.Id
-
-        LEFT JOIN DrugAdministrations DA
-            ON P.Id = DA.PatientId
-
-        WHERE P.Id = @ID
-
-        GROUP BY
-            P.Id,
-            P.Name,
-            P.DOB,
-            W.Name;
-
-    END TRY
-
-    BEGIN CATCH
-
-        SELECT
-            ERROR_NUMBER() AS ErrorNumber,
-            ERROR_MESSAGE() AS ErrorMessage,
-            ERROR_SEVERITY() AS ErrorSeverity;
-
-    END CATCH
-END;
+--Question 14 — Create a Reporting Index
+--Create a nonclustered index on DrugAdministrations using PatientId and DATE, including DrugCode, Dosage, and Quantity.
+CREATE NONCLUSTERED INDEX Reporting_Index
+ON DrugAdministrations(PatientId,DATE)
+INCLUDE (DRUGCODE,DOSAGE)
